@@ -138,7 +138,7 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
 
   <section class="card" id="avance">
     <h2>Avance por curso</h2>
-    <p class="note">Cada barra es el total de familias del curso. Toca un curso para ver sus familias más abajo.</p>
+    <p class="note">Cada barra es el total de familias con alumnos en el curso; si la familia ya pagó en otro curso, el hermano suma en morado. Toca un curso para ver sus familias más abajo.</p>
     <div class="legend">
       <span><i style="background:var(--bingo)"></i>Pagó en el bingo</span>
       <span><i style="background:var(--dele)"></i>Pagó a delegada</span>
@@ -231,9 +231,14 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       if (s === 'd') b.mdel += +pagos[f[0]].monto || 0;
     });
     ROWS.forEach(r => { if (r.sib && rowEstado(r) === 's') by[r.curso].sib++; });
+    // barras por curso: cada familia con alumno en el curso cuenta 1 vez EN ESE curso
+    // (los hermanos de una familia ya pagada en otro curso suman como "Pagó hermano/a")
+    ORDER.forEach(c => by[c].bar = {total: 0, p: 0, d: 0, h: 0, e: 0, f: 0});
+    ROWS.forEach(r => { const B = by[r.curso] && by[r.curso].bar; if (!B) return; const s = rowEstado(r); B.total++; B[s === 's' ? 'h' : s]++; });
     return ORDER.map(c => by[c]);
   }
   const paidOf = r => r.p + r.d + r.h;
+  const barPct = r => r.bar.total ? paidOf(r.bar) / r.bar.total : 0;
 
   function renderTop(rows) {
     const T = rows.reduce((a, r) => { ['total','p','d','h','e','f','monto','mdel','sib'].forEach(k => a[k] += r[k]); return a; }, {total:0,p:0,d:0,h:0,e:0,f:0,monto:0,mdel:0,sib:0});
@@ -249,31 +254,32 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     $('#k-fal-s').textContent = T.e ? `+ ${T.e} pendiente${T.e > 1 ? 's' : ''} de confirmar` : 'sin compra ni pago';
     $('#k-rec').textContent = clp(T.monto + T.mdel);
     $('#k-rec-s').textContent = `bingo ${clp(T.monto)} + delegadas ${clp(T.mdel)}`;
-    const top = [...rows].sort((a, b) => paidOf(b) / b.total - paidOf(a) / a.total)[0];
-    const cero = rows.filter(r => paidOf(r) + r.e === 0).map(r => r.curso);
-    $('#lede').textContent = `Han pagado ${pag} de ${T.total} familias (${pct(pag / T.total)}). ${top.curso} va adelante con ${pct(paidOf(top) / top.total)}` +
+    const top = [...rows].sort((a, b) => barPct(b) - barPct(a))[0];
+    const cero = rows.filter(r => paidOf(r.bar) + r.bar.e === 0).map(r => r.curso);
+    $('#lede').textContent = `Han pagado ${pag} de ${T.total} familias (${pct(pag / T.total)}). ${top.curso} va adelante con ${pct(barPct(top))}` +
       (cero.length ? `; ${cero.join(', ')} todavía no tienen pagos.` : '.');
   }
 
   function renderBars(rows) {
     const box = $('#bars'); box.textContent = '';
     const list = [...rows];
-    if (st.orden === 'pct') list.sort((a, b) => paidOf(b) / b.total - paidOf(a) / a.total || ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso));
+    if (st.orden === 'pct') list.sort((a, b) => barPct(b) - barPct(a) || ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso));
     list.forEach(r => {
+      const B = r.bar;
       const b = document.createElement('button'); b.type = 'button'; b.className = 'bar' + (st.curso === r.curso ? ' sel' : '');
-      const paid = paidOf(r);
-      b.setAttribute('aria-label', `${r.curso}: ${paid} de ${r.total} familias pagaron, faltan ${r.f}`);
+      const paid = paidOf(B);
+      b.setAttribute('aria-label', `${r.curso}: ${paid} de ${B.total} familias pagaron (incluye ${B.h} por hermano/a), faltan ${B.f}`);
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.curso;
       const tr = document.createElement('span'); tr.className = 'track';
       [['p','var(--bingo)'],['d','var(--dele)'],['h','var(--herm)'],['e','var(--pend)']].forEach(([k, c]) => {
-        const s = document.createElement('span'); s.style.width = (r[k] / r.total * 100) + '%'; s.style.background = c; tr.appendChild(s);
+        const s = document.createElement('span'); s.style.width = (B.total ? B[k] / B.total * 100 : 0) + '%'; s.style.background = c; tr.appendChild(s);
       });
       const end = document.createElement('span'); end.className = 'end';
-      const bb = document.createElement('b'); bb.textContent = pct(paid / r.total);
-      const em = document.createElement('em'); em.textContent = r.f ? `faltan ${r.f}` : (r.e ? `${r.e} pend.` : 'completo');
+      const bb = document.createElement('b'); bb.textContent = pct(barPct(r));
+      const em = document.createElement('em'); em.textContent = B.f ? `faltan ${B.f}` : (B.e ? `${B.e} pend.` : 'completo');
       end.append(bb, em);
       b.append(nm, tr, end);
-      b.title = `${r.curso}: bingo ${r.p}, delegada ${r.d}, hermano/a ${r.h}, pendientes ${r.e}, faltan ${r.f}` + (r.sib ? ` · además ${r.sib} alumno${r.sib > 1 ? 's' : ''} cubierto${r.sib > 1 ? 's' : ''} por hermano/a de otro curso` : '') + ` · ${clp(r.monto + r.mdel)}`;
+      b.title = `${r.curso}: ${B.total} familias · bingo ${B.p}, delegada ${B.d}, hermano/a ${B.h}, pendientes ${B.e}, faltan ${B.f} · ${clp(r.monto + r.mdel)}`;
       b.addEventListener('click', () => { st.curso = st.curso === r.curso ? '' : r.curso; $('#f-curso').value = st.curso; render(); if (st.curso) $('#familias').scrollIntoView({behavior: 'smooth', block: 'start'}); });
       box.appendChild(b);
     });
