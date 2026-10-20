@@ -106,6 +106,8 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
 .btn.lnk{border:0;background:none;color:var(--muted);text-decoration:underline;padding:4px}
 .err{color:var(--bad);font-size:.8rem}
 .meta{font-size:.75rem;color:var(--muted)}
+.cart{grid-column:1/-1;justify-self:start;font-size:.8rem;font-weight:600;color:var(--dele);background:var(--dele-bg);border-radius:6px;padding:4px 10px}
+.cart.warn{color:var(--bad);background:var(--bad-bg)}
 .banner{background:var(--pend-bg);color:var(--fg);border-radius:8px;padding:10px 12px;font-size:.85rem}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 @media (max-width:620px){
@@ -354,6 +356,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
         const when = p.at ? new Date(p.at).toLocaleDateString('es-CL', {day: 'numeric', month: 'short'}) : '';
         m.textContent = [fs === 'h' && p.hermano ? `Pagó: ${p.hermano}.` : '', 'Marcado', by && `por ${by}`, when && `el ${when}`].filter(Boolean).join(' ');
         row.appendChild(m);
+        if (fs === 'd' && (p.cartones || p.aviso)) {
+          const c = document.createElement('div'); c.className = p.cartones ? 'cart' : 'cart warn';
+          c.textContent = p.cartones ? `🎟️ Cartones ${p.cartones} · compra ${p.compra}` : `⚠️ ${p.aviso}`;
+          row.appendChild(c);
+        }
       }
       if (st.open === k && !pagos[id]) row.appendChild(st.mode === 'h' ? formHermano(r) : formMonto(r));
       if (st.confirm === k) row.appendChild(confirmFor(r));
@@ -407,7 +414,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       write(r.fid, k, {tipo: 'delegada', monto: v});
     };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { st.open = null; render(); } });
-    return shell(r, r.sib ? `Monto pagado (familia ${r.fam})` : 'Monto pagado', money, save);
+    const w = shell(r, r.sib ? `Monto pagado (familia ${r.fam})` : 'Monto pagado', money, save);
+    const hint = document.createElement('small'); hint.className = 'meta'; hint.style.flexBasis = '100%';
+    hint.textContent = 'Al guardar se asignan solos los cartones en el bingo (precio preventa: $9.000 = 6, $12.000 = 12, $21.000 = 18…).';
+    w.appendChild(hint);
+    return w;
   }
 
   function formHermano(r) {
@@ -428,7 +439,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const id = r.fid, p = pagos[id];
     const w = document.createElement('div'); w.className = 'form';
     const t = document.createElement('span'); t.style.fontSize = '.85rem';
-    t.textContent = p.tipo === 'hermano' ? '¿Quitar el pago por hermano/a?' : `¿Quitar el pago de ${clp(p.monto)}?`;
+    t.textContent = p.tipo === 'hermano' ? '¿Quitar el pago por hermano/a?' : `¿Quitar el pago de ${clp(p.monto)}?` + (p.compra ? ` Se anula la compra ${p.compra} y sus cartones quedan libres.` : '');
     const yes = document.createElement('button'); yes.type = 'button'; yes.className = 'btn'; yes.textContent = 'Sí, quitar';
     const no = document.createElement('button'); no.type = 'button'; no.className = 'btn lnk'; no.textContent = 'No';
     yes.addEventListener('click', async () => {
