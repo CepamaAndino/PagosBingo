@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Bingo Andino 2026 · Pagos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+/* Layout: header + KPI strip, stacked progress bars per curso, then the working family list with delegate check-offs */
+:root{
+  --bg:#f6f7f4; --panel:#ffffff; --fg:#1d2420; --muted:#5f6b64; --line:#dfe3dd;
+  --accent:#1f6f5c; --bingo:#2f8a5f; --dele:#3a6fb0; --herm:#7a5bb5; --herm-bg:#ece6f6; --pend:#c98a12; --falta:#e4e8e2; --bad:#b4442f;
+  --ok-bg:#e3f2e9; --dele-bg:#e4ecf7; --pend-bg:#fbf0d9; --bad-bg:#f7e4df;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121614; --panel:#1a201d; --fg:#e8ece9; --muted:#9aa69f; --line:#2c3430;
+  --accent:#5cc3a2; --bingo:#4fb583; --dele:#6f9fe0; --herm:#a98be0; --herm-bg:#2a2340; --pend:#e0a83a; --falta:#2a322e; --bad:#e2735c;
+  --ok-bg:#1d3328; --dele-bg:#1d2a3d; --pend-bg:#3a2e14; --bad-bg:#3a201a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121614; --panel:#1a201d; --fg:#e8ece9; --muted:#9aa69f; --line:#2c3430;
+  --accent:#5cc3a2; --bingo:#4fb583; --dele:#6f9fe0; --herm:#a98be0; --herm-bg:#2a2340; --pend:#e0a83a; --falta:#2a322e; --bad:#e2735c;
+  --ok-bg:#1d3328; --dele-bg:#1d2a3d; --pend-bg:#3a2e14; --bad-bg:#3a201a; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px;font-variant-numeric:tabular-nums}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,4vw,2.3rem);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch;line-height:1.45}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.live.on i{background:var(--bingo)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .lb{font-size:.78rem;color:var(--muted);letter-spacing:.02em}
+.kpi .v{font-family:var(--display);font-weight:500;font-size:1.9rem;line-height:1.05}
+.kpi .s{font-size:.78rem;color:var(--muted)}
+.kpi.main{border-color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{font-family:var(--display);font-weight:500;font-size:1.2rem;margin:0}
+.note{margin:0;color:var(--muted);font-size:.85rem;line-height:1.4}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.seg{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{font:inherit;font-size:.78rem;background:none;border:0;color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--bg);color:var(--fg);font-weight:600}
+.bars{display:flex;flex-direction:column;gap:6px;position:relative}
+.bar{display:grid;grid-template-columns:6rem 1fr 7.5rem;gap:10px;align-items:center;cursor:pointer;background:none;border:0;padding:3px 4px;border-radius:6px;font:inherit;color:inherit;text-align:left}
+.bar:hover,.bar.sel{background:var(--bg)}
+.bar:focus-visible{outline:2px solid var(--accent)}
+.bar .nm{font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar.sel .nm{font-weight:700}
+.track{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--falta)}
+.track span{height:100%;transition:width .4s ease}
+.bar .end{font-size:.82rem;display:flex;gap:6px;justify-content:flex-end;white-space:nowrap}
+.bar .end b{font-weight:700}
+.bar .end em{font-style:normal;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools select,.tools input{font:inherit;font-size:.85rem;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0}
+.tools input{flex:1 1 12rem}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chips button{font:inherit;font-size:.8rem;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chips button[aria-pressed="true"]{color:var(--fg);border-color:var(--fg);font-weight:600}
+.count{font-size:.8rem;color:var(--muted)}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.fam{display:grid;grid-template-columns:6.5rem minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.fam .cu{font-size:.8rem;color:var(--muted)}
+.fam .who{min-width:0}
+.fam .who b{display:block;font-weight:600}
+.fam .who small{display:block;color:var(--muted);font-size:.8rem;line-height:1.35}
+.act{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:600;font-size:.75rem;white-space:nowrap}
+.pill.p{background:var(--ok-bg);color:var(--bingo)}
+.pill.d{background:var(--dele-bg);color:var(--dele)}
+.pill.h,.pill.s{background:var(--herm-bg);color:var(--herm)}
+.sibrow{background:color-mix(in srgb,var(--herm-bg) 35%,transparent)}
+.txt{font:inherit;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);padding:7px 10px;flex:1 1 14rem;min-width:0}
+.txt:focus{outline:2px solid var(--herm)}
+.me{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--dele-bg);border-radius:8px;padding:10px 12px}
+.me label{font-size:.85rem;font-weight:600}
+.me input{font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);padding:7px 10px;flex:1 1 12rem;max-width:22rem}
+.me small{color:var(--muted);font-size:.78rem;flex-basis:100%}
+.livebar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.livebar .live{margin-top:0}
+.sin ul{margin:0;padding-left:1.1rem;font-size:.85rem;display:flex;flex-direction:column;gap:4px}
+footer{color:var(--muted);font-size:.78rem;text-align:center}
+.pill.e{background:var(--pend-bg);color:var(--pend)}
+.pill.f{background:var(--bad-bg);color:var(--bad)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:var(--bg);color:var(--fg)}
+.chk input{width:16px;height:16px;accent-color:var(--dele);margin:0}
+.chk:has(input:disabled){opacity:.5;cursor:not-allowed}
+.form{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--dele-bg);border-radius:8px;padding:10px}
+.form label{font-size:.82rem}
+.money{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.money span{padding:0 4px 0 10px;color:var(--muted)}
+.money input{font:inherit;border:0;background:transparent;color:var(--fg);padding:7px 10px 7px 2px;width:7.5rem}
+.money input:focus{outline:none}
+.money:focus-within{outline:2px solid var(--dele)}
+.btn{font:inherit;font-size:.82rem;border-radius:8px;padding:6px 12px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.btn.pri{background:var(--dele);border-color:var(--dele);color:#fff;font-weight:600}
+.btn.lnk{border:0;background:none;color:var(--muted);text-decoration:underline;padding:4px}
+.err{color:var(--bad);font-size:.8rem}
+.meta{font-size:.75rem;color:var(--muted)}
+.banner{background:var(--pend-bg);color:var(--fg);border-radius:8px;padding:10px 12px;font-size:.85rem}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+@media (max-width:620px){
+  .fam{grid-template-columns:minmax(0,1fr) auto}
+  .fam .cu{grid-column:1/-1}
+  .bar{grid-template-columns:4.6rem 1fr 6rem}
+}
+@media (prefers-reduced-motion:reduce){.track span{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Bingo Andino 2026 · Pagos por curso</h1>
+    <p class="lede" id="lede">Cargando…</p>
+    <div class="livebar"><span class="live" id="live"><i></i><span>Cargando datos del bingo…</span></span>
+    <button type="button" class="btn" id="refrescar">Actualizar</button></div>
+  </header>
+
+  <section class="kpis" aria-label="Resumen">
+    <div class="kpi main"><span class="lb">Familias que pagaron</span><span class="v" id="k-pag">—</span><span class="s" id="k-pag-s">de — familias</span></div>
+    <div class="kpi"><span class="lb">% pagado del colegio</span><span class="v" id="k-pct">—</span><span class="s">1 alumno por familia</span></div>
+    <div class="kpi"><span class="lb">Pagaron a delegada</span><span class="v" id="k-del">—</span><span class="s" id="k-del-s">—</span></div>
+    <div class="kpi"><span class="lb">Pagó por hermano/a</span><span class="v" id="k-her">—</span><span class="s" id="k-her-s">—</span></div>
+    <div class="kpi"><span class="lb">Faltan</span><span class="v" id="k-fal">—</span><span class="s" id="k-fal-s">—</span></div>
+    <div class="kpi"><span class="lb">Total recaudado</span><span class="v" id="k-rec">—</span><span class="s" id="k-rec-s">—</span></div>
+  </section>
+
+  <section class="card" id="avance">
+    <h2>Avance por curso</h2>
+    <p class="note">Cada barra es el total de familias del curso. Toca un curso para ver sus familias más abajo.</p>
+    <div class="legend">
+      <span><i style="background:var(--bingo)"></i>Pagó en el bingo</span>
+      <span><i style="background:var(--dele)"></i>Pagó a delegada</span>
+      <span><i style="background:var(--herm)"></i>Pagó hermano/a</span>
+      <span><i style="background:var(--pend)"></i>Pendiente</span>
+      <span><i style="background:var(--falta);border:1px solid var(--line)"></i>Falta</span>
+      <div class="seg" role="group" aria-label="Orden de las barras">
+        <button type="button" data-o="curso" aria-pressed="true">Por curso</button>
+        <button type="button" data-o="pct" aria-pressed="false">Por %</button>
+      </div>
+    </div>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="card" id="familias">
+    <h2>Familias por curso</h2>
+    <p class="note">Marca <b>Pagó a delegada</b> cuando una familia te pague directo, pon el monto y guarda. Si la familia ya pagó en otro curso, el hermano aparece en morado como <b>Pagó por hermano/a</b>. Si un hermano pagó y no aparece, marca <b>Pagó hermano/a</b> y escribe quién. Cada familia cuenta una sola vez en el %.</p>
+    <div class="me"><label for="mi-nombre">Tu nombre</label><input id="mi-nombre" type="text" maxlength="60" placeholder="Ej: Mpaz, delegada 3° Básico" autocomplete="name">
+      <small>Queda registrado en cada pago que marques. Se guarda en este teléfono para la próxima vez.</small></div>
+    <div class="tools">
+      <select id="f-curso" aria-label="Curso"><option value="">Todos los cursos</option></select>
+      <div class="chips" id="f-est" role="group" aria-label="Estado">
+        <button type="button" data-e="" aria-pressed="true">Todas</button>
+        <button type="button" data-e="f" aria-pressed="false">Faltan</button>
+        <button type="button" data-e="e" aria-pressed="false">Pendientes</button>
+        <button type="button" data-e="d" aria-pressed="false">A delegada</button>
+        <button type="button" data-e="h" aria-pressed="false">Por hermano</button>
+        <button type="button" data-e="p" aria-pressed="false">Bingo</button>
+      </div>
+      <input id="f-q" type="search" placeholder="Buscar apellido o alumno…" aria-label="Buscar">
+      <span class="count" id="f-count"></span>
+    </div>
+    <div class="list" id="list"><div class="empty">Cargando familias…</div></div>
+  </section>
+
+  <section class="card sin" id="sin" hidden>
+    <h2>Compras sin asignar</h2>
+    <p class="note">Estas compras del bingo no calzaron con ningún alumno de la nómina, así que todavía no suman. Para asignarlas, agrégalas en la pestaña <b>Asignaciones</b> del Sheet de pagos (ID de compra → ID de familia o <code>CURSO:nombre del curso</code>).</p>
+    <ul id="sin-list"></ul>
+  </section>
+  <footer>Bingo Andino 2026 · CEPAMA Colegio Andino Montessori · Compras en vivo desde la app del bingo; nómina de matrículas julio 2026</footer>
+</div>
+
+<script>
+// URL de la aplicación web del Apps Script de pagos (Implementar → Nueva implementación → Aplicación web)
+const API_URL = 'PEGA_AQUI_LA_URL_DEL_APPS_SCRIPT';
+</script>
+<script>
+(() => {
+  let CURSOS = [], FAM = [], ORDER = [], BINGO_MONTO = {}, BYID = {}, ROWS = [], SIN = [], loaded = false, lastAt = null;
+  const $ = s => document.querySelector(s);
+  const clp = v => '$' + Math.round(v).toLocaleString('es-CL');
+  const pct = v => Math.round(v * 100) + '%';
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function setData(d) {
+    CURSOS = d.cursos; FAM = d.familias; ORDER = CURSOS.map(c => c[0]); BINGO_MONTO = Object.fromEntries(CURSOS);
+    BYID = Object.fromEntries(FAM.map(f => [f[0], f])); SIN = d.sinAsignar || []; lastAt = d.generado;
+    pagos = {}; Object.keys(d.pagos || {}).forEach(k => { if (BYID[k]) pagos[k] = d.pagos[k]; });
+    ROWS = [];
+    buildRows();
+    const sel = $('#f-curso');
+    if (sel.options.length === 1) ORDER.forEach(c => sel.appendChild(new Option(c, c)));
+    loaded = true;
+  }
+  function buildRows() { FAM.forEach(f => {
+    const [id, curso, fam, kids] = f;
+    const here = kids.filter(k => k[1] === curso).map(k => k[0]);
+    ROWS.push({key: id, fid: id, curso, fam, sib: false, alumnos: here.join(', '),
+      otros: kids.filter(k => k[1] !== curso).map(k => `${k[0]} (${k[1]})`).join(', ')});
+    kids.forEach((k, i) => { if (k[1] !== curso && ORDER.indexOf(k[1]) !== -1) ROWS.push({key: id + '-' + i, fid: id, curso: k[1], fam, sib: true, alumnos: k[0], cuenta: curso}); });
+  }); }
+
+  let pagos = {};            // famId -> {tipo:'delegada'|'hermano', monto, hermano, por, at}
+  let canWrite = true;
+  const st = {curso: '', est: '', q: '', orden: 'curso', open: null, mode: null, confirm: null, busy: null, err: {}, draft: {}};
+
+  // family state: p bingo, d delegada, h hermano (manual), e pendiente, f falta
+  const famEstado = f => f[4] === 'p' ? 'p' : (pagos[f[0]] ? (pagos[f[0]].tipo === 'hermano' ? 'h' : 'd') : f[4]);
+  const isPaid = s => s === 'p' || s === 'd' || s === 'h';
+  // what a list row shows: a sibling row of a paid family is "s" (covered by sibling)
+  const rowEstado = r => { const s = famEstado(BYID[r.fid]); return r.sib && isPaid(s) ? 's' : s; };
+
+  function stats() {
+    const by = {};
+    ORDER.forEach(c => by[c] = {curso: c, total: 0, p: 0, d: 0, h: 0, e: 0, f: 0, monto: BINGO_MONTO[c] || 0, mdel: 0, sib: 0});
+    FAM.forEach(f => {
+      const b = by[f[1]], s = famEstado(f);
+      b.total++; b[s]++;
+      if (s === 'd') b.mdel += +pagos[f[0]].monto || 0;
+    });
+    ROWS.forEach(r => { if (r.sib && rowEstado(r) === 's') by[r.curso].sib++; });
+    return ORDER.map(c => by[c]);
+  }
+  const paidOf = r => r.p + r.d + r.h;
+
+  function renderTop(rows) {
+    const T = rows.reduce((a, r) => { ['total','p','d','h','e','f','monto','mdel','sib'].forEach(k => a[k] += r[k]); return a; }, {total:0,p:0,d:0,h:0,e:0,f:0,monto:0,mdel:0,sib:0});
+    const pag = paidOf(T);
+    $('#k-pag').textContent = pag;
+    $('#k-pag-s').textContent = `de ${T.total} familias`;
+    $('#k-pct').textContent = pct(pag / T.total);
+    $('#k-del').textContent = T.d;
+    $('#k-del-s').textContent = clp(T.mdel) + ' recibido';
+    $('#k-her').textContent = T.sib + T.h;
+    $('#k-her-s').textContent = 'alumnos cubiertos por hermano/a';
+    $('#k-fal').textContent = T.f;
+    $('#k-fal-s').textContent = T.e ? `+ ${T.e} pendiente${T.e > 1 ? 's' : ''} de confirmar` : 'sin compra ni pago';
+    $('#k-rec').textContent = clp(T.monto + T.mdel);
+    $('#k-rec-s').textContent = `bingo ${clp(T.monto)} + delegadas ${clp(T.mdel)}`;
+    const top = [...rows].sort((a, b) => paidOf(b) / b.total - paidOf(a) / a.total)[0];
+    const cero = rows.filter(r => paidOf(r) + r.e === 0).map(r => r.curso);
+    $('#lede').textContent = `Han pagado ${pag} de ${T.total} familias (${pct(pag / T.total)}). ${top.curso} va adelante con ${pct(paidOf(top) / top.total)}` +
+      (cero.length ? `; ${cero.join(', ')} todavía no tienen pagos.` : '.');
+  }
+
+  function renderBars(rows) {
+    const box = $('#bars'); box.textContent = '';
+    const list = [...rows];
+    if (st.orden === 'pct') list.sort((a, b) => paidOf(b) / b.total - paidOf(a) / a.total || ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso));
+    list.forEach(r => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'bar' + (st.curso === r.curso ? ' sel' : '');
+      const paid = paidOf(r);
+      b.setAttribute('aria-label', `${r.curso}: ${paid} de ${r.total} familias pagaron, faltan ${r.f}`);
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.curso;
+      const tr = document.createElement('span'); tr.className = 'track';
+      [['p','var(--bingo)'],['d','var(--dele)'],['h','var(--herm)'],['e','var(--pend)']].forEach(([k, c]) => {
+        const s = document.createElement('span'); s.style.width = (r[k] / r.total * 100) + '%'; s.style.background = c; tr.appendChild(s);
+      });
+      const end = document.createElement('span'); end.className = 'end';
+      const bb = document.createElement('b'); bb.textContent = pct(paid / r.total);
+      const em = document.createElement('em'); em.textContent = r.f ? `faltan ${r.f}` : (r.e ? `${r.e} pend.` : 'completo');
+      end.append(bb, em);
+      b.append(nm, tr, end);
+      b.title = `${r.curso}: bingo ${r.p}, delegada ${r.d}, hermano/a ${r.h}, pendientes ${r.e}, faltan ${r.f}` + (r.sib ? ` · además ${r.sib} alumno${r.sib > 1 ? 's' : ''} cubierto${r.sib > 1 ? 's' : ''} por hermano/a de otro curso` : '') + ` · ${clp(r.monto + r.mdel)}`;
+      b.addEventListener('click', () => { st.curso = st.curso === r.curso ? '' : r.curso; $('#f-curso').value = st.curso; render(); if (st.curso) $('#familias').scrollIntoView({behavior: 'smooth', block: 'start'}); });
+      box.appendChild(b);
+    });
+  }
+
+  function pillFor(r, s) {
+    const p = document.createElement('span'); p.className = 'pill ' + s;
+    const pg = pagos[r.fid];
+    if (s === 'p') p.textContent = 'Pagó (bingo)';
+    else if (s === 'd') p.textContent = `Delegada · ${clp(pg.monto)}`;
+    else if (s === 'h') p.textContent = 'Pagó por hermano/a';
+    else if (s === 's') p.textContent = 'Pagó por hermano/a';
+    else if (s === 'e') p.textContent = 'Pendiente';
+    else p.textContent = 'Falta';
+    return p;
+  }
+
+  function renderList() {
+    const box = $('#list'); box.textContent = '';
+    const q = norm(st.q);
+    const eo = {f: 0, e: 1, d: 2, h: 3, s: 4, p: 5};
+    const want = r => { const s = rowEstado(r); if (!st.est) return true; if (st.est === 'h') return s === 'h' || s === 's'; return s === st.est; };
+    const rows = ROWS.filter(r => (!st.curso || r.curso === st.curso) && want(r) && (!q || norm(r.fam + ' ' + r.alumnos + ' ' + (r.otros || '')).includes(q)))
+      .sort((a, b) => ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso) || eo[rowEstado(a)] - eo[rowEstado(b)] || a.fam.localeCompare(b.fam));
+    $('#f-count').textContent = `${rows.length} fila${rows.length === 1 ? '' : 's'}`;
+    if (!rows.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'No hay familias con ese filtro.'; box.appendChild(e); return; }
+    rows.forEach(r => {
+      const s = rowEstado(r), fs = famEstado(BYID[r.fid]), id = r.fid, k = r.key;
+      const row = document.createElement('div'); row.className = 'fam' + (r.sib ? ' sibrow' : '');
+      const cu = document.createElement('span'); cu.className = 'cu'; cu.textContent = r.curso;
+      const who = document.createElement('div'); who.className = 'who';
+      const b = document.createElement('b'); b.textContent = r.fam;
+      const sm = document.createElement('small');
+      sm.textContent = r.sib ? `${r.alumnos} · la familia cuenta en ${r.cuenta}` : r.alumnos + (r.otros ? ` · hermanos: ${r.otros}` : '');
+      who.append(b, sm);
+      const act = document.createElement('div'); act.className = 'act';
+      act.appendChild(pillFor(r, s));
+      const editable = fs !== 'p';
+      if (editable) {
+        const off = !canWrite || st.busy === id;
+        const lab = document.createElement('label'); lab.className = 'chk';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.id = 'cb-' + k;
+        cb.checked = fs === 'd' || (st.open === k && st.mode === 'd'); cb.disabled = off || fs === 'h';
+        cb.addEventListener('change', () => {
+          if (cb.checked) { st.open = k; st.mode = 'd'; st.confirm = null; }
+          else if (pagos[id]) { st.confirm = k; cb.checked = true; }
+          else { st.open = null; }
+          render();
+          if (st.open === k) setTimeout(() => { const i = document.getElementById('m-' + k); if (i) i.focus(); }, 0);
+        });
+        lab.append(cb, document.createTextNode('Pagó a delegada'));
+        act.appendChild(lab);
+        if (!r.sib) {
+          const lh = document.createElement('label'); lh.className = 'chk';
+          const ch = document.createElement('input'); ch.type = 'checkbox'; ch.id = 'ch-' + k;
+          ch.checked = fs === 'h' || (st.open === k && st.mode === 'h'); ch.disabled = off || fs === 'd';
+          ch.addEventListener('change', () => {
+            if (ch.checked) { st.open = k; st.mode = 'h'; st.confirm = null; }
+            else if (pagos[id]) { st.confirm = k; ch.checked = true; }
+            else { st.open = null; }
+            render();
+            if (st.open === k) setTimeout(() => { const i = document.getElementById('m-' + k); if (i) i.focus(); }, 0);
+          });
+          lh.append(ch, document.createTextNode('Pagó hermano/a'));
+          act.appendChild(lh);
+        }
+      }
+      row.append(cu, who, act);
+      if (pagos[id] && (fs === 'd' || fs === 'h')) {
+        const p = pagos[id]; const m = document.createElement('div'); m.className = 'meta';
+        const by = p.por || '';
+        const when = p.at ? new Date(p.at).toLocaleDateString('es-CL', {day: 'numeric', month: 'short'}) : '';
+        m.textContent = [fs === 'h' && p.hermano ? `Pagó: ${p.hermano}.` : '', 'Marcado', by && `por ${by}`, when && `el ${when}`].filter(Boolean).join(' ');
+        row.appendChild(m);
+      }
+      if (st.open === k && !pagos[id]) row.appendChild(st.mode === 'h' ? formHermano(r) : formMonto(r));
+      if (st.confirm === k) row.appendChild(confirmFor(r));
+      box.appendChild(row);
+    });
+  }
+
+  async function post(body) {
+    const res = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Error del servidor');
+    setData(d); setLive(true);
+  }
+  async function write(id, k, data) {
+    const por = ($('#mi-nombre').value || '').trim();
+    if (!por) { st.err[k] = 'Escribe tu nombre arriba de la lista (campo "Tu nombre") antes de guardar.'; render(); $('#mi-nombre').focus(); return; }
+    st.busy = id; st.err[k] = ''; render();
+    try {
+      await post({action: 'marcar', famId: id, por, ...data});
+      st.open = null; delete st.draft[k];
+    } catch (e) {
+      st.err[k] = 'No se pudo guardar: ' + (e.message || 'revisa tu conexión') + '. Intenta de nuevo.';
+    }
+    st.busy = null; render();
+  }
+
+  function shell(r, label, input, onSave) {
+    const k = r.key;
+    const w = document.createElement('div'); w.className = 'form';
+    const lb = document.createElement('label'); lb.htmlFor = 'm-' + k; lb.textContent = label;
+    const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn pri'; ok.textContent = st.busy === r.fid ? 'Guardando…' : 'Guardar'; ok.disabled = st.busy === r.fid;
+    const no = document.createElement('button'); no.type = 'button'; no.className = 'btn lnk'; no.textContent = 'Cancelar';
+    const err = document.createElement('span'); err.className = 'err'; err.textContent = st.err[k] || '';
+    ok.addEventListener('click', onSave);
+    no.addEventListener('click', () => { st.open = null; st.err[k] = ''; render(); });
+    w.append(lb, input, ok, no, err);
+    return w;
+  }
+
+  function formMonto(r) {
+    const k = r.key;
+    const money = document.createElement('div'); money.className = 'money';
+    const sp = document.createElement('span'); sp.textContent = '$';
+    const inp = document.createElement('input'); inp.id = 'm-' + k; inp.inputMode = 'numeric'; inp.placeholder = '12.000'; inp.autocomplete = 'off';
+    inp.value = st.draft[k] || '';
+    inp.addEventListener('input', () => { const d = inp.value.replace(/\D/g, ''); inp.value = d ? (+d).toLocaleString('es-CL') : ''; st.draft[k] = inp.value; });
+    money.append(sp, inp);
+    const save = () => {
+      const v = +inp.value.replace(/\D/g, '');
+      if (!v) { st.err[k] = 'Escribe el monto (solo números).'; render(); return; }
+      write(r.fid, k, {tipo: 'delegada', monto: v});
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { st.open = null; render(); } });
+    return shell(r, r.sib ? `Monto pagado (familia ${r.fam})` : 'Monto pagado', money, save);
+  }
+
+  function formHermano(r) {
+    const k = r.key;
+    const inp = document.createElement('input'); inp.id = 'm-' + k; inp.className = 'txt'; inp.placeholder = 'Ej: Diego Montecinos, 5° Básico'; inp.autocomplete = 'off'; inp.maxLength = 120;
+    inp.value = st.draft[k] || '';
+    inp.addEventListener('input', () => { st.draft[k] = inp.value; });
+    const save = () => {
+      const v = inp.value.trim();
+      if (!v) { st.err[k] = 'Escribe qué hermano/a pagó y su curso.'; render(); return; }
+      write(r.fid, k, {tipo: 'hermano', monto: 0, hermano: v});
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { st.open = null; render(); } });
+    return shell(r, '¿Qué hermano/a pagó?', inp, save);
+  }
+
+  function confirmFor(r) {
+    const id = r.fid, p = pagos[id];
+    const w = document.createElement('div'); w.className = 'form';
+    const t = document.createElement('span'); t.style.fontSize = '.85rem';
+    t.textContent = p.tipo === 'hermano' ? '¿Quitar el pago por hermano/a?' : `¿Quitar el pago de ${clp(p.monto)}?`;
+    const yes = document.createElement('button'); yes.type = 'button'; yes.className = 'btn'; yes.textContent = 'Sí, quitar';
+    const no = document.createElement('button'); no.type = 'button'; no.className = 'btn lnk'; no.textContent = 'No';
+    yes.addEventListener('click', async () => {
+      st.busy = id; render();
+      try { await post({action: 'quitar', famId: id}); st.confirm = null; }
+      catch (e) { st.err[r.key] = 'No se pudo quitar.'; }
+      st.busy = null; render();
+    });
+    no.addEventListener('click', () => { st.confirm = null; render(); });
+    w.append(t, yes, no);
+    return w;
+  }
+
+  function renderSin() {
+    const box = $('#sin'); box.hidden = !SIN.length; if (!SIN.length) return;
+    const ul = $('#sin-list'); ul.textContent = '';
+    SIN.forEach(c => { const li = document.createElement('li'); li.textContent = `${c.id} · ${c.alumno} · ${c.curso} · ${c.estado} · ${clp(c.monto)}`; ul.appendChild(li); });
+  }
+  function setLive(ok, msg) {
+    const live = $('#live'), lt = live.querySelector('span');
+    live.classList.toggle('on', ok);
+    lt.textContent = msg || (lastAt ? `En vivo · actualizado ${new Date(lastAt).toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'})} · se refresca solo cada 30 s` : 'En vivo');
+  }
+  function render() {
+    if (!loaded) return;
+    renderSin();
+    const a = document.activeElement, aid = a && a.id && a.closest && a.closest('#list') ? a.id : null;
+    const rows = stats(); renderTop(rows); renderBars(rows); renderList();
+    if (aid) { const n = document.getElementById(aid); if (n) n.focus(); }
+  }
+
+  const sel = $('#f-curso');
+  sel.addEventListener('change', () => { st.curso = sel.value; render(); });
+  $('#f-q').addEventListener('input', e => { st.q = e.target.value.trim(); renderList(); });
+  document.querySelectorAll('#f-est button').forEach(b => b.addEventListener('click', () => {
+    st.est = b.dataset.e; document.querySelectorAll('#f-est button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList();
+  }));
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    st.orden = b.dataset.o; document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b)); render();
+  }));
+  const nameIn = $('#mi-nombre');
+  try { nameIn.value = localStorage.getItem('bingo-delegada') || ''; } catch (_) {}
+  nameIn.addEventListener('change', () => { try { localStorage.setItem('bingo-delegada', nameIn.value.trim()); } catch (_) {} });
+  $('#refrescar').addEventListener('click', () => load());
+
+  let loading = false;
+  async function load() {
+    if (loading) return; loading = true;
+    try {
+      const res = await fetch(API_URL + '?t=' + Date.now());
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || 'Error del servidor');
+      setData(d); setLive(true); render();
+    } catch (e) {
+      setLive(false, loaded ? 'Sin conexión: mostrando los últimos datos. Reintentando…' : 'No se pudieron cargar los datos: ' + (e.message || e));
+      if (!loaded) $('#lede').textContent = 'No se pudieron cargar los datos. Revisa la conexión y toca "Actualizar".';
+    }
+    loading = false;
+  }
+  load();
+  setInterval(() => { if (!document.hidden && st.open === null && st.confirm === null && st.busy === null) load(); }, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>
