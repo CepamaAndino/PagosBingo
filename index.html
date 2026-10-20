@@ -70,6 +70,7 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,4vw,2.3rem)
 .list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
 .fam{display:grid;grid-template-columns:6.5rem minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
 .fam .cu{font-size:.8rem;color:var(--muted)}
+.fam .cu .tal{display:block;font-size:.72rem;font-weight:600;color:var(--accent)}
 .fam .who{min-width:0}
 .fam .who b{display:block;font-weight:600}
 .fam .who small{display:block;color:var(--muted);font-size:.8rem;line-height:1.35}
@@ -162,6 +163,7 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
       <small>Queda registrado en cada pago que marques. Se guarda en este teléfono para la próxima vez.</small></div>
     <div class="tools">
       <select id="f-curso" aria-label="Curso"><option value="">Todos los cursos</option></select>
+      <select id="f-taller" aria-label="Taller" hidden><option value="">Todos los talleres</option></select>
       <div class="chips" id="f-est" role="group" aria-label="Estado">
         <button type="button" data-e="" aria-pressed="true">Todas</button>
         <button type="button" data-e="f" aria-pressed="false">Faltan</button>
@@ -203,20 +205,22 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     buildRows();
     const sel = $('#f-curso');
     if (sel.options.length === 1) ORDER.forEach(c => sel.appendChild(new Option(c, c)));
+    fillTalleres();
     loaded = true;
     const ex = $('#excel'); if (ex) ex.disabled = false;
   }
   function buildRows() { FAM.forEach(f => {
     const [id, curso, fam, kids] = f;
     const here = kids.filter(k => k[1] === curso).map(k => k[0]);
-    ROWS.push({key: id, fid: id, curso, fam, sib: false, alumnos: here.join(', '),
+    const tall = c => [...new Set(kids.filter(k => k[1] === c && k[2]).map(k => k[2]))].join(', ');
+    ROWS.push({key: id, fid: id, curso, fam, sib: false, alumnos: here.join(', '), taller: tall(curso),
       otros: kids.filter(k => k[1] !== curso).map(k => `${k[0]} (${k[1]})`).join(', ')});
-    kids.forEach((k, i) => { if (k[1] !== curso && ORDER.indexOf(k[1]) !== -1) ROWS.push({key: id + '-' + i, fid: id, curso: k[1], fam, sib: true, alumnos: k[0], cuenta: curso}); });
+    kids.forEach((k, i) => { if (k[1] !== curso && ORDER.indexOf(k[1]) !== -1) ROWS.push({key: id + '-' + i, fid: id, curso: k[1], fam, sib: true, alumnos: k[0], taller: k[2] || '', cuenta: curso}); });
   }); }
 
   let pagos = {};            // famId -> {tipo:'delegada'|'hermano', monto, hermano, por, at}
   let canWrite = true;
-  const st = {curso: '', est: '', q: '', orden: 'curso', open: null, mode: null, confirm: null, busy: null, err: {}, draft: {}};
+  const st = {curso: '', taller: '', est: '', q: '', orden: 'curso', open: null, mode: null, confirm: null, busy: null, err: {}, draft: {}};
 
   // family state: p bingo, d delegada, h hermano (manual), e pendiente, f falta
   const famEstado = f => f[4] === 'p' ? 'p' : (pagos[f[0]] ? (pagos[f[0]].tipo === 'hermano' ? 'h' : 'd') : f[4]);
@@ -304,7 +308,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const q = norm(st.q);
     const eo = {f: 0, e: 1, d: 2, h: 3, s: 4, p: 5};
     const want = r => { const s = rowEstado(r); if (!st.est) return true; if (st.est === 'h') return s === 'h' || s === 's'; return s === st.est; };
-    const rows = ROWS.filter(r => (!st.curso || r.curso === st.curso) && want(r) && (!q || norm(r.fam + ' ' + r.alumnos + ' ' + (r.otros || '')).includes(q)))
+    const rows = ROWS.filter(r => (!st.curso || r.curso === st.curso) && (!st.taller || r.taller.split(', ').includes(st.taller)) && want(r) && (!q || norm(r.fam + ' ' + r.alumnos + ' ' + (r.otros || '')).includes(q)))
       .sort((a, b) => ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso) || eo[rowEstado(a)] - eo[rowEstado(b)] || a.fam.localeCompare(b.fam));
     $('#f-count').textContent = `${rows.length} fila${rows.length === 1 ? '' : 's'}`;
     if (!rows.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'No hay familias con ese filtro.'; box.appendChild(e); return; }
@@ -312,6 +316,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       const s = rowEstado(r), fs = famEstado(BYID[r.fid]), id = r.fid, k = r.key;
       const row = document.createElement('div'); row.className = 'fam' + (r.sib ? ' sibrow' : '');
       const cu = document.createElement('span'); cu.className = 'cu'; cu.textContent = r.curso;
+      if (r.taller) { const tg = document.createElement('small'); tg.className = 'tal'; tg.textContent = r.taller; cu.appendChild(tg); }
       const who = document.createElement('div'); who.className = 'who';
       const b = document.createElement('b'); b.textContent = r.fam;
       const sm = document.createElement('small');
@@ -472,7 +477,16 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   }
 
   const sel = $('#f-curso');
-  sel.addEventListener('change', () => { st.curso = sel.value; render(); });
+  sel.addEventListener('change', () => { st.curso = sel.value; fillTalleres(); render(); });
+  // talleres (solo 1° a 4° Básico): el selector muestra los del curso elegido, o todos
+  const selT = $('#f-taller');
+  function fillTalleres() {
+    const ts = [...new Set(ROWS.filter(r => !st.curso || r.curso === st.curso).flatMap(r => r.taller ? r.taller.split(', ') : []))].sort((a, b) => a.localeCompare(b));
+    if (!ts.includes(st.taller)) st.taller = '';
+    selT.replaceChildren(new Option('Todos los talleres', ''), ...ts.map(t => new Option(t, t)));
+    selT.value = st.taller; selT.hidden = !ts.length;
+  }
+  selT.addEventListener('change', () => { st.taller = selT.value; renderList(); });
   $('#f-q').addEventListener('input', e => { st.q = e.target.value.trim(); renderList(); });
   document.querySelectorAll('#f-est button').forEach(b => b.addEventListener('click', () => {
     st.est = b.dataset.e; document.querySelectorAll('#f-est button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList();
@@ -521,7 +535,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const familias = ROWS.slice().sort((a, b) => ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso) || a.fam.localeCompare(b.fam)).map(r => {
       const s = rowEstado(r), p = pagos[r.fid];
       return {
-        Curso: r.curso, Familia: r.fam, Alumnos: r.alumnos + (r.sib ? ' (familia cuenta en ' + r.cuenta + ')' : ''),
+        Curso: r.curso, Taller: r.taller || '', Familia: r.fam, Alumnos: r.alumnos + (r.sib ? ' (familia cuenta en ' + r.cuenta + ')' : ''),
         Estado: s === 's' ? 'Pagó por hermano/a' : NOMBRE[s],
         'Monto delegada': !r.sib && p && p.tipo === 'delegada' ? Number(p.monto) || 0 : '',
         'Hermano/a que pagó': !r.sib && p && p.tipo === 'hermano' ? p.hermano : '',
@@ -538,7 +552,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, sheet(resumen, [12,9,10,13,14,11,8,9,10,15,18,12]), 'Resumen');
     XLSX.utils.book_append_sheet(wb, sheet(dataPagos, [12,18,22,6,26,12,6,10,5,9,11,11,10,10,34], cartonesHeader), 'Pagos delegadas');
-    XLSX.utils.book_append_sheet(wb, sheet(familias, [12,24,40,18,14,24,18,18]), 'Familias');
+    XLSX.utils.book_append_sheet(wb, sheet(familias, [12,12,24,40,18,14,24,18,18]), 'Familias');
     const hoy = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, 'BINGO_ANDINO_2026_PAGOS_DELEGADAS_' + hoy + '.xlsx');
   }
