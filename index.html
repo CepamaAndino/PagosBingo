@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Bingo Andino 2026 · Pagos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
@@ -122,7 +123,8 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
     <h1>Bingo Andino 2026 · Pagos por curso</h1>
     <p class="lede" id="lede">Cargando…</p>
     <div class="livebar"><span class="live" id="live"><i></i><span>Cargando datos del bingo…</span></span>
-    <button type="button" class="btn" id="refrescar">Actualizar</button></div>
+    <button type="button" class="btn" id="refrescar">Actualizar</button>
+    <button type="button" class="btn pri" id="excel" disabled>Descargar Excel</button></div>
   </header>
 
   <section class="kpis" aria-label="Resumen">
@@ -200,6 +202,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const sel = $('#f-curso');
     if (sel.options.length === 1) ORDER.forEach(c => sel.appendChild(new Option(c, c)));
     loaded = true;
+    const ex = $('#excel'); if (ex) ex.disabled = false;
   }
   function buildRows() { FAM.forEach(f => {
     const [id, curso, fam, kids] = f;
@@ -464,6 +467,64 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   try { nameIn.value = localStorage.getItem('bingo-delegada') || ''; } catch (_) {}
   nameIn.addEventListener('change', () => { try { localStorage.setItem('bingo-delegada', nameIn.value.trim()); } catch (_) {} });
   $('#refrescar').addEventListener('click', () => load());
+  $('#excel').addEventListener('click', exportExcel);
+
+  /* ============ EXPORTAR EXCEL (mismas columnas que el reporte del bingo) ============ */
+  function exportExcel() {
+    if (!loaded || !window.XLSX) { alert('Todavía no cargan los datos o la librería de Excel. Intenta de nuevo en unos segundos.'); return; }
+    const fecha = v => v ? new Date(v).toLocaleString('es-CL') : '';
+    const kidsEn = (f, curso) => f[3].filter(k => k[1] === curso).map(k => k[0]).join(', ') || f[3].map(k => k[0]).join(', ');
+    const NOMBRE = {p: 'Pagó (bingo)', d: 'Pagó a delegada', h: 'Pagó por hermano/a', e: 'Pendiente', f: 'Falta'};
+
+    // 1) Pagos delegadas: mismas columnas que la pestaña "Cartones" del reporte del bingo, para pegar debajo
+    const dataPagos = FAM.filter(f => pagos[f[0]] && f[4] !== 'p').map(f => {
+      const p = pagos[f[0]];
+      return {
+        ID: 'DEL-' + f[0], Fecha: fecha(p.at), Comprador: f[2], Email: '',
+        Alumno: kidsEn(f, f[1]), Curso: f[1], WhatsApp: '', Modo: p.tipo === 'hermano' ? 'hermano' : 'delegada', Sets: '',
+        Cantidad: '', CartonDesde: '', CartonHasta: '', Monto: p.tipo === 'hermano' ? 0 : Number(p.monto) || 0,
+        Estado: 'aceptada',
+        MetodoPago: p.tipo === 'hermano' ? ('Pagó hermano/a: ' + (p.hermano || '')) + (p.por ? ' · marcó ' + p.por : '') : ('Pago a delegada' + (p.por ? ': ' + p.por : ''))
+      };
+    }).sort((a, b) => ORDER.indexOf(a.Curso) - ORDER.indexOf(b.Curso) || a.Comprador.localeCompare(b.Comprador));
+
+    // 2) Resumen por curso
+    const rows = stats();
+    const resumen = rows.map(r => ({
+      Curso: r.curso, Familias: r.total, 'Pagó bingo': r.p, 'Pagó delegada': r.d, 'Pagó hermano/a': r.h,
+      Pendientes: r.e, Faltan: r.f, Pagaron: r.p + r.d + r.h, '% pagado': r.total ? Math.round((r.p + r.d + r.h) / r.total * 100) / 100 : 0,
+      'Recaudado bingo': r.monto, 'Recaudado delegadas': r.mdel, 'Total curso': r.monto + r.mdel
+    }));
+    const T = k => resumen.reduce((a, x) => a + x[k], 0);
+    resumen.push({Curso: 'TOTAL', Familias: T('Familias'), 'Pagó bingo': T('Pagó bingo'), 'Pagó delegada': T('Pagó delegada'), 'Pagó hermano/a': T('Pagó hermano/a'),
+      Pendientes: T('Pendientes'), Faltan: T('Faltan'), Pagaron: T('Pagaron'), '% pagado': Math.round(T('Pagaron') / T('Familias') * 100) / 100,
+      'Recaudado bingo': T('Recaudado bingo'), 'Recaudado delegadas': T('Recaudado delegadas'), 'Total curso': T('Total curso')});
+
+    // 3) Familias (lista para imprimir por curso)
+    const familias = ROWS.slice().sort((a, b) => ORDER.indexOf(a.curso) - ORDER.indexOf(b.curso) || a.fam.localeCompare(b.fam)).map(r => {
+      const s = rowEstado(r), p = pagos[r.fid];
+      return {
+        Curso: r.curso, Familia: r.fam, Alumnos: r.alumnos + (r.sib ? ' (familia cuenta en ' + r.cuenta + ')' : ''),
+        Estado: s === 's' ? 'Pagó por hermano/a' : NOMBRE[s],
+        'Monto delegada': !r.sib && p && p.tipo === 'delegada' ? Number(p.monto) || 0 : '',
+        'Hermano/a que pagó': !r.sib && p && p.tipo === 'hermano' ? p.hermano : '',
+        'Marcado por': !r.sib && p ? p.por || '' : '', 'Fecha marca': !r.sib && p ? fecha(p.at) : ''
+      };
+    });
+
+    const sheet = (data, widths, header) => {
+      const ws = XLSX.utils.json_to_sheet(data, header ? {header} : undefined);
+      ws['!cols'] = widths.map(w => ({wch: w}));
+      return ws;
+    };
+    const cartonesHeader = ['ID','Fecha','Comprador','Email','Alumno','Curso','WhatsApp','Modo','Sets','Cantidad','CartonDesde','CartonHasta','Monto','Estado','MetodoPago'];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet(resumen, [12,9,10,13,14,11,8,9,10,15,18,12]), 'Resumen');
+    XLSX.utils.book_append_sheet(wb, sheet(dataPagos, [12,18,22,6,26,12,6,10,5,9,11,11,10,10,34], cartonesHeader), 'Pagos delegadas');
+    XLSX.utils.book_append_sheet(wb, sheet(familias, [12,24,40,18,14,24,18,18]), 'Familias');
+    const hoy = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, 'BINGO_ANDINO_2026_PAGOS_DELEGADAS_' + hoy + '.xlsx');
+  }
 
   let loading = false;
   async function load() {
