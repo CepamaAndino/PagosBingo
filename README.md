@@ -2,7 +2,7 @@
 
 Dashboard público (GitHub Pages) con el avance de pagos del Bingo Andino por curso, contando **1 alumno por familia**.
 
-- Las compras de cartones se leen **en vivo** del Google Sheet de la app del bingo (solo lectura, no se modifica nada).
+- Las compras de cartones se leen **en vivo** desde la app del bingo (acción `listPurchases`, solo lectura; se piden como máximo cada 30 s).
 - Las delegadas marcan **Pagó a delegada** (con monto) o **Pagó hermano/a** y los totales se recalculan para todos.
 - No se necesita cuenta: basta el link.
 
@@ -17,7 +17,7 @@ apps-script/Code.gs   ← el backend (va en Google Apps Script, NO se publica en
 
 1. Abre el Sheet **"Pagos Bingo Andino 2026"** (ya está creado en tu Drive).
 2. En ese Sheet: **Extensiones → Apps Script**. Borra lo que haya y pega todo `apps-script/Code.gs`.
-3. Arriba del código, en `BINGO_SHEET_ID`, pega el ID del Sheet de la app del bingo (la parte entre `/d/` y `/edit` de su URL). Si la pestaña de compras no se llama `Cartones`, cambia `BINGO_TAB` (si no, la busca sola).
+3. Arriba del código, en `BINGO_PASSWORD`, escribe la clave del panel de administración del bingo (la URL de la app del bingo ya viene puesta en `BINGO_API_URL`).
 4. Guarda. Elige la función **`probar`** y dale **Ejecutar** → acepta los permisos. En el registro debe decir cuántas compras leyó y si alguna quedó "sin asignar".
 5. **Implementar → Nueva implementación → Tipo: Aplicación web**
    - Ejecutar como: **Yo**
