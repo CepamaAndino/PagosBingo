@@ -234,7 +234,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     FAM.forEach(f => {
       const b = by[f[1]], s = famEstado(f);
       b.total++; b[s]++;
-      if (s === 'd') b.mdel += +pagos[f[0]].monto || 0;
+      // el pago a delegada suma siempre, aunque la familia además haya comprado en el bingo
+      const pg = pagos[f[0]];
+      if (pg && pg.tipo === 'delegada') b.mdel += +pg.monto || 0;
     });
     ROWS.forEach(r => { if (r.sib && rowEstado(r) === 's') by[r.curso].sib++; });
     // barras por curso: cada familia con alumno en el curso cuenta 1 vez EN ESE curso
@@ -371,6 +373,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
           c.textContent = p.cartones ? `🎟️ Cartones ${p.cartones} · compra ${p.compra}` : `⚠️ ${p.aviso}`;
           row.appendChild(c);
         }
+      } else if (!r.sib && fs === 'p' && pagos[id] && pagos[id].tipo === 'delegada') {
+        // compró en el bingo y además pagó a delegada: se muestra y suma ambos
+        const p = pagos[id]; const c = document.createElement('div'); c.className = 'cart';
+        c.textContent = `➕ También pagó ${clp(p.monto)} a delegada` + (p.por ? ` (${p.por})` : '') + (p.cartones ? ` · cartones ${p.cartones}` : '');
+        row.appendChild(c);
       }
       if (st.open === k && !pagos[id]) row.appendChild(st.mode === 'h' ? formHermano(r) : formMonto(r));
       if (st.confirm === k) row.appendChild(confirmFor(r));
@@ -525,7 +532,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const NOMBRE = {p: 'Pagó (bingo)', d: 'Pagó a delegada', h: 'Pagó por hermano/a', e: 'Pendiente', f: 'Falta'};
 
     // 1) Pagos delegadas: mismas columnas que la pestaña "Cartones" del reporte del bingo, para pegar debajo
-    const dataPagos = FAM.filter(f => pagos[f[0]] && f[4] !== 'p').map(f => {
+    // incluye también a familias que compraron en el bingo Y pagaron a delegada (ambos pagos suman)
+    const dataPagos = FAM.filter(f => pagos[f[0]] && (f[4] !== 'p' || pagos[f[0]].tipo === 'delegada')).map(f => {
       const p = pagos[f[0]];
       return {
         ID: 'DEL-' + f[0], Fecha: fecha(p.at), Comprador: f[2], Email: '',
