@@ -354,6 +354,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
           act.appendChild(lh);
         }
       }
+      if (!r.sib && canWrite) {
+        const del = document.createElement('button'); del.type = 'button'; del.className = 'btn lnk'; del.title = 'Eliminar familia de la lista'; del.textContent = '🗑️ Eliminar'; del.disabled = st.busy === id;
+        del.addEventListener('click', () => eliminarFamilia(id, r.fam, pagos[id]));
+        act.appendChild(del);
+      }
       row.append(cu, who, act);
       if (pagos[id] && (fs === 'd' || fs === 'h')) {
         const p = pagos[id]; const m = document.createElement('div'); m.className = 'meta';
@@ -456,6 +461,18 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     no.addEventListener('click', () => { st.confirm = null; render(); });
     w.append(t, yes, no);
     return w;
+  }
+
+  async function eliminarFamilia(id, nombre, pago) {
+    const aviso = pago && pago.compra ? `\n\nOjo: esta familia tiene la compra ${pago.compra} (pago a delegada). Se anula y sus cartones quedan libres.` : '';
+    if (!confirm(`¿Eliminar a la familia ${nombre} de la lista?${aviso}\n\nSe puede restaurar desde el Sheet (pestaña FamiliasEliminadas).`)) return;
+    const password = prompt('Clave de administrador:');
+    if (!password) return;
+    const por = ($('#mi-nombre').value || '').trim();
+    st.busy = id; render();
+    try { await post({action: 'eliminarFamilia', famId: id, password, por}); }
+    catch (e) { alert('No se pudo eliminar: ' + (e.message || 'revisa tu conexión')); }
+    st.busy = null; render();
   }
 
   function renderSin() {
