@@ -117,6 +117,7 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
   .bar{grid-template-columns:4.6rem 1fr 6rem}
 }
 @media (prefers-reduced-motion:reduce){.track span{transition:none}}
+[hidden]{display:none !important}
 </style>
 </head>
 <body>
@@ -127,7 +128,8 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
     <p class="lede" id="lede">Cargando…</p>
     <div class="livebar"><span class="live" id="live"><i></i><span>Cargando datos del bingo…</span></span>
     <button type="button" class="btn" id="refrescar">Actualizar</button>
-    <button type="button" class="btn pri" id="excel" disabled>Descargar Excel</button></div>
+    <button type="button" class="btn pri" id="excel" disabled hidden>Descargar Excel</button>
+    <button type="button" class="btn" id="adminBtn">🔒 Administrador</button></div>
   </header>
 
   <section class="kpis" aria-label="Resumen">
@@ -136,7 +138,7 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
     <div class="kpi"><span class="lb">Pagaron a delegada</span><span class="v" id="k-del">—</span><span class="s" id="k-del-s">—</span></div>
     <div class="kpi"><span class="lb">Pagó por hermano/a</span><span class="v" id="k-her">—</span><span class="s" id="k-her-s">—</span></div>
     <div class="kpi"><span class="lb">Faltan</span><span class="v" id="k-fal">—</span><span class="s" id="k-fal-s">—</span></div>
-    <div class="kpi"><span class="lb">Total recaudado</span><span class="v" id="k-rec">—</span><span class="s" id="k-rec-s">—</span></div>
+    <div class="kpi" id="kpi-rec" hidden><span class="lb">Total recaudado</span><span class="v" id="k-rec">—</span><span class="s" id="k-rec-s">—</span></div>
   </section>
 
   <section class="card" id="avance">
@@ -192,12 +194,16 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
 </script>
 <script>
 (() => {
+  // Los montos en $ solo los ve el administrador (el servidor ni los envía al público)
+  let ADMIN = false, adminPass = '';
+  try { adminPass = sessionStorage.getItem('pb_admin') || ''; } catch (_) {}
   let CURSOS = [], FAM = [], ORDER = [], BINGO_MONTO = {}, BYID = {}, ROWS = [], SIN = [], loaded = false, lastAt = null;
   const $ = s => document.querySelector(s);
   const clp = v => '$' + Math.round(v).toLocaleString('es-CL');
   const pct = v => Math.round(v * 100) + '%';
   const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   function setData(d) {
+    ADMIN = !!d.admin;
     CURSOS = d.cursos; FAM = d.familias; ORDER = CURSOS.map(c => c[0]); BINGO_MONTO = Object.fromEntries(CURSOS);
     BYID = Object.fromEntries(FAM.map(f => [f[0], f])); SIN = d.sinAsignar || []; lastAt = d.generado;
     pagos = {}; Object.keys(d.pagos || {}).forEach(k => { if (BYID[k]) pagos[k] = d.pagos[k]; });
@@ -207,7 +213,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     if (sel.options.length === 1) ORDER.forEach(c => sel.appendChild(new Option(c, c)));
     fillTalleres();
     loaded = true;
-    const ex = $('#excel'); if (ex) ex.disabled = false;
+    const ex = $('#excel'); if (ex) { ex.disabled = false; ex.hidden = !ADMIN; }
+    const kr = $('#kpi-rec'); if (kr) kr.hidden = !ADMIN;
+    const ab = $('#adminBtn'); if (ab) ab.textContent = ADMIN ? '🔓 Salir de administrador' : '🔒 Administrador';
   }
   function buildRows() { FAM.forEach(f => {
     const [id, curso, fam, kids] = f;
@@ -255,7 +263,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     $('#k-pag-s').textContent = `de ${T.total} familias`;
     $('#k-pct').textContent = pct(pag / T.total);
     $('#k-del').textContent = T.d;
-    $('#k-del-s').textContent = clp(T.mdel) + ' recibido';
+    $('#k-del-s').textContent = ADMIN ? clp(T.mdel) + ' recibido' : 'pagos directos a la delegada';
     $('#k-her').textContent = T.sib + T.h;
     $('#k-her-s').textContent = 'alumnos cubiertos por hermano/a';
     $('#k-fal').textContent = T.f;
@@ -287,7 +295,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       const em = document.createElement('em'); em.textContent = B.f ? `faltan ${B.f}` : (B.e ? `${B.e} pend.` : 'completo');
       end.append(bb, em);
       b.append(nm, tr, end);
-      b.title = `${r.curso}: ${B.total} familias · bingo ${B.p}, delegada ${B.d}, hermano/a ${B.h}, pendientes ${B.e}, faltan ${B.f} · ${clp(r.monto + r.mdel)}`;
+      b.title = `${r.curso}: ${B.total} familias · bingo ${B.p}, delegada ${B.d}, hermano/a ${B.h}, pendientes ${B.e}, faltan ${B.f}` + (ADMIN ? ` · ${clp(r.monto + r.mdel)}` : '');
       b.addEventListener('click', () => { st.curso = st.curso === r.curso ? '' : r.curso; $('#f-curso').value = st.curso; render(); if (st.curso) $('#familias').scrollIntoView({behavior: 'smooth', block: 'start'}); });
       box.appendChild(b);
     });
@@ -297,7 +305,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const p = document.createElement('span'); p.className = 'pill ' + s;
     const pg = pagos[r.fid];
     if (s === 'p') p.textContent = 'Pagó (bingo)';
-    else if (s === 'd') p.textContent = `Delegada · ${clp(pg.monto)}`;
+    else if (s === 'd') p.textContent = ADMIN ? `Delegada · ${clp(pg.monto)}` : 'Pagó a delegada';
     else if (s === 'h') p.textContent = 'Pagó por hermano/a';
     else if (s === 's') p.textContent = 'Pagó por hermano/a';
     else if (s === 'e') p.textContent = 'Pendiente';
@@ -376,7 +384,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       } else if (!r.sib && fs === 'p' && pagos[id] && pagos[id].tipo === 'delegada') {
         // compró en el bingo y además pagó a delegada: se muestra y suma ambos
         const p = pagos[id]; const c = document.createElement('div'); c.className = 'cart';
-        c.textContent = `➕ También pagó ${clp(p.monto)} a delegada` + (p.por ? ` (${p.por})` : '') + (p.cartones ? ` · cartones ${p.cartones}` : '');
+        c.textContent = `➕ También pagó${ADMIN ? ' ' + clp(p.monto) : ''} a delegada` + (p.por ? ` (${p.por})` : '') + (p.cartones ? ` · cartones ${p.cartones}` : '');
         row.appendChild(c);
       }
       if (st.open === k && !pagos[id]) row.appendChild(st.mode === 'h' ? formHermano(r) : formMonto(r));
@@ -386,6 +394,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   }
 
   async function post(body) {
+    if (adminPass && !body.password) body.password = adminPass;
     const res = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
     const d = await res.json();
     if (!d.ok) throw new Error(d.error || 'Error del servidor');
@@ -456,7 +465,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     const id = r.fid, p = pagos[id];
     const w = document.createElement('div'); w.className = 'form';
     const t = document.createElement('span'); t.style.fontSize = '.85rem';
-    t.textContent = p.tipo === 'hermano' ? '¿Quitar el pago por hermano/a?' : `¿Quitar el pago de ${clp(p.monto)}?` + (p.compra ? ` Se anula la compra ${p.compra} y sus cartones quedan libres.` : '');
+    t.textContent = p.tipo === 'hermano' ? '¿Quitar el pago por hermano/a?' : `¿Quitar el pago${ADMIN ? ' de ' + clp(p.monto) : ''}?` + (p.compra ? ` Se anula la compra ${p.compra} y sus cartones quedan libres.` : '');
     const yes = document.createElement('button'); yes.type = 'button'; yes.className = 'btn'; yes.textContent = 'Sí, quitar';
     const no = document.createElement('button'); no.type = 'button'; no.className = 'btn lnk'; no.textContent = 'No';
     yes.addEventListener('click', async () => {
@@ -473,7 +482,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   async function eliminarFamilia(id, nombre, pago) {
     const aviso = pago && pago.compra ? `\n\nOjo: esta familia tiene la compra ${pago.compra} (pago a delegada). Se anula y sus cartones quedan libres.` : '';
     if (!confirm(`¿Eliminar a la familia ${nombre} de la lista?${aviso}\n\nSe puede restaurar desde el Sheet (pestaña FamiliasEliminadas).`)) return;
-    const password = prompt('Clave de administrador:');
+    const password = adminPass || prompt('Clave de administrador:');
     if (!password) return;
     const por = ($('#mi-nombre').value || '').trim();
     st.busy = id; render();
@@ -485,7 +494,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   function renderSin() {
     const box = $('#sin'); box.hidden = !SIN.length; if (!SIN.length) return;
     const ul = $('#sin-list'); ul.textContent = '';
-    SIN.forEach(c => { const li = document.createElement('li'); li.textContent = `${c.id} · ${c.alumno} · ${c.curso} · ${c.estado} · ${clp(c.monto)}`; ul.appendChild(li); });
+    SIN.forEach(c => { const li = document.createElement('li'); li.textContent = `${c.id} · ${c.alumno} · ${c.curso} · ${c.estado}${ADMIN ? ' · ' + clp(c.monto) : ''}`; ul.appendChild(li); });
   }
   function setLive(ok, msg) {
     const live = $('#live'), lt = live.querySelector('span');
@@ -582,12 +591,26 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     XLSX.writeFile(wb, 'BINGO_ANDINO_2026_PAGOS_DELEGADAS_' + hoy + '.xlsx');
   }
 
+  $('#adminBtn').addEventListener('click', async () => {
+    if (ADMIN || adminPass) { adminPass = ''; try { sessionStorage.removeItem('pb_admin'); } catch (_) {} await load(); return; }
+    const pw = prompt('Clave de administrador (para ver los montos):');
+    if (!pw) return;
+    adminPass = pw; await load();
+    if (ADMIN) { try { sessionStorage.setItem('pb_admin', pw); } catch (_) {} }
+    else alert('Clave incorrecta.');
+  });
+
   let loading = false;
   async function load() {
     if (loading) return; loading = true;
     try {
-      const res = await fetch(API_URL + '?t=' + Date.now());
-      const d = await res.json();
+      let d;
+      if (adminPass) {
+        const r1 = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({action: 'cargar', password: adminPass})});
+        d = await r1.json();
+        if (!d.ok && /clave/i.test(d.error || '')) { adminPass = ''; try { sessionStorage.removeItem('pb_admin'); } catch (_) {} d = null; }
+      }
+      if (!d) { const res = await fetch(API_URL + '?t=' + Date.now()); d = await res.json(); }
       if (!d.ok) throw new Error(d.error || 'Error del servidor');
       setData(d); setLive(true); render();
     } catch (e) {
