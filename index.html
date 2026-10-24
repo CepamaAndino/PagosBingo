@@ -180,6 +180,12 @@ footer{color:var(--muted);font-size:.78rem;text-align:center}
     <div class="list" id="list"><div class="empty">Cargando familias…</div></div>
   </section>
 
+  <section class="card sin" id="otros" hidden>
+    <h2>Compras de profesores / otros</h2>
+    <p class="note">Compras del bingo que no son de familias de la nómina (profesores, etc.). No cuentan en el % de familias, pero sí en el total recaudado. Si una se detectó mal, agrégala en la pestaña <b>Asignaciones</b> con el ID de la familia.</p>
+    <ul id="otros-list"></ul>
+  </section>
+
   <section class="card sin" id="sin" hidden>
     <h2>Compras sin asignar</h2>
     <p class="note">Estas compras del bingo no calzaron con ningún alumno de la nómina, así que todavía no suman. Para asignarlas, agrégalas en la pestaña <b>Asignaciones</b> del Sheet de pagos (ID de compra → ID de familia o <code>CURSO:nombre del curso</code>).</p>
@@ -195,7 +201,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
 <script>
 (() => {
   // Los montos en $ solo los ve el administrador (el servidor ni los envía al público)
-  let ADMIN = false, adminPass = '';
+  let ADMIN = false, adminPass = '', OTROS = [];
+  const otrosMonto = () => OTROS.filter(c => c.estado === 'aceptada').reduce((a, c) => a + (+c.monto || 0), 0);
   try { adminPass = sessionStorage.getItem('pb_admin') || ''; } catch (_) {}
   let CURSOS = [], FAM = [], ORDER = [], BINGO_MONTO = {}, BYID = {}, ROWS = [], SIN = [], loaded = false, lastAt = null;
   const $ = s => document.querySelector(s);
@@ -203,7 +210,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   const pct = v => Math.round(v * 100) + '%';
   const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   function setData(d) {
-    ADMIN = !!d.admin;
+    ADMIN = !!d.admin; OTROS = d.otros || [];
     CURSOS = d.cursos; FAM = d.familias; ORDER = CURSOS.map(c => c[0]); BINGO_MONTO = Object.fromEntries(CURSOS);
     BYID = Object.fromEntries(FAM.map(f => [f[0], f])); SIN = d.sinAsignar || []; lastAt = d.generado;
     pagos = {}; Object.keys(d.pagos || {}).forEach(k => { if (BYID[k]) pagos[k] = d.pagos[k]; });
@@ -268,8 +275,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     $('#k-her-s').textContent = 'alumnos cubiertos por hermano/a';
     $('#k-fal').textContent = T.f;
     $('#k-fal-s').textContent = T.e ? `+ ${T.e} pendiente${T.e > 1 ? 's' : ''} de confirmar` : 'sin compra ni pago';
-    $('#k-rec').textContent = clp(T.monto + T.mdel);
-    $('#k-rec-s').textContent = `bingo ${clp(T.monto)} + delegadas ${clp(T.mdel)}`;
+    $('#k-rec').textContent = clp(T.monto + T.mdel + otrosMonto());
+    $('#k-rec-s').textContent = `bingo ${clp(T.monto)} + delegadas ${clp(T.mdel)}` + (OTROS.length ? ` + profesores/otros ${clp(otrosMonto())}` : '');
     const top = [...rows].sort((a, b) => barPct(b) - barPct(a))[0];
     const cero = rows.filter(r => paidOf(r.bar) + r.bar.e === 0).map(r => r.curso);
     $('#lede').textContent = `Han pagado ${pag} de ${T.total} familias (${pct(pag / T.total)}). ${top.curso} va adelante con ${pct(barPct(top))}` +
@@ -491,6 +498,11 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
     st.busy = null; render();
   }
 
+  function renderOtros() {
+    const box = $('#otros'); box.hidden = !(ADMIN && OTROS.length); if (box.hidden) return;
+    const ul = $('#otros-list'); ul.textContent = '';
+    OTROS.forEach(c => { const li = document.createElement('li'); li.textContent = `${c.id} · ${c.alumno} (${c.comprador}) · ${c.estado} · ${clp(c.monto)}`; ul.appendChild(li); });
+  }
   function renderSin() {
     const box = $('#sin'); box.hidden = !SIN.length; if (!SIN.length) return;
     const ul = $('#sin-list'); ul.textContent = '';
@@ -503,7 +515,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
   }
   function render() {
     if (!loaded) return;
-    renderSin();
+    renderSin(); renderOtros();
     const a = document.activeElement, aid = a && a.id && a.closest && a.closest('#list') ? a.id : null;
     const rows = stats(); renderTop(rows); renderBars(rows); renderList();
     if (aid) { const n = document.getElementById(aid); if (n) n.focus(); }
@@ -560,6 +572,8 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxjxyvWdwVMcMTkA-RXIiio
       Pendientes: r.e, Faltan: r.f, Pagaron: r.p + r.d + r.h, '% pagado': r.total ? Math.round((r.p + r.d + r.h) / r.total * 100) / 100 : 0,
       'Recaudado bingo': r.monto, 'Recaudado delegadas': r.mdel, 'Total curso': r.monto + r.mdel
     }));
+    if (OTROS.length) resumen.push({Curso: 'Profesores / otros', Familias: 0, 'Pagó bingo': 0, 'Pagó delegada': 0, 'Pagó hermano/a': 0, Pendientes: 0, Faltan: 0, Pagaron: 0, '% pagado': 0,
+      'Recaudado bingo': otrosMonto(), 'Recaudado delegadas': 0, 'Total curso': otrosMonto()});
     const T = k => resumen.reduce((a, x) => a + x[k], 0);
     resumen.push({Curso: 'TOTAL', Familias: T('Familias'), 'Pagó bingo': T('Pagó bingo'), 'Pagó delegada': T('Pagó delegada'), 'Pagó hermano/a': T('Pagó hermano/a'),
       Pendientes: T('Pendientes'), Faltan: T('Faltan'), Pagaron: T('Pagaron'), '% pagado': Math.round(T('Pagaron') / T('Familias') * 100) / 100,
